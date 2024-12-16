@@ -2,6 +2,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
@@ -10,11 +12,11 @@ public class Ride implements RideInterface {
 
     // 游乐设施的名称，用于唯一标识该游乐设施
     private String rideName;
-    // 一次循环中游乐设施可承载的最大游客数量，限制每次运行可接待的游客上限
+    // 一次循环中游乐设施可承载的最大游客数量
     private int maxRider;
     // 记录游乐设施已经运行的次数，方便统计设施的使用频率等信息
     private int numOfCycles;
-    // 负责操作该游乐设施的员工，操作员对于游乐设施的正常运行起着关键作用
+    // 负责操作该游乐设施的员工
     private Employee rideOperator;
     // 用于存储等待乘坐该游乐设施的游客队列，遵循先进先出原则
     private Queue<Visitor> waitingQueue;
@@ -52,12 +54,12 @@ public class Ride implements RideInterface {
         return maxRider;
     }
 
-    // 设置一次循环可承载的最大游客数量的方法，可根据实际运营情况调整承载量限制
+    // 设置一次循环可承载的最大游客数量的方法
     public void setMaxRider(int maxRider) {
         if (maxRider > 0) {
             this.maxRider = maxRider;
         } else {
-            System.out.println("最大承载游客数量必须大于 0，请重新设置。");
+            System.out.println("The maximum number of riders must be greater than 0. Please reset it.");
         }
     }
 
@@ -66,12 +68,12 @@ public class Ride implements RideInterface {
         return numOfCycles;
     }
 
-    // 设置游乐设施运行次数的方法，一般用于数据初始化或者特殊场景下的次数调整（需谨慎使用）
+    // 设置游乐设施运行次数的方法
     public void setNumOfCycles(int numOfCycles) {
         if (numOfCycles >= 0) {
             this.numOfCycles = numOfCycles;
         } else {
-            System.out.println("运行次数不能为负数，请重新设置。");
+            System.out.println("The number of operation cycles cannot be negative. Please reset it.");
         }
     }
 
@@ -80,80 +82,95 @@ public class Ride implements RideInterface {
         return rideOperator;
     }
 
-    // 设置游乐设施操作员的方法，确保操作员不为空，同时输出设置成功的提示信息
+    // 设置游乐设施操作员的方法，确保操作员不为空，输出设置成功的提示信息
     public void setRideOperator(Employee rideOperator) {
         if (rideOperator!= null) {
             this.rideOperator = rideOperator;
-            System.out.println(rideOperator.getName() + " 已被成功设置为 " + rideName + " 的操作员。");
+            System.out.println(rideOperator.getName() + " has been successfully set as the operator of " + rideName + ".");
         } else {
-            System.out.println("操作员不能为空，请设置有效的员工对象。");
+            System.out.println("The operator cannot be null. Please set a valid employee object.");
         }
     }
 
-    // 将游客添加到等待队列的方法，同时输出符合规范的提示信息，体现游客入队情况
+    // 将游客添加到等待队列的方法，同时输出符合规范的提示信息，体现游客入队情况，并设置参观日期为当前日期
+    // 这里针对儿童票游客添加了额外提示，提醒工作人员关注儿童相关情况
     @Override
     public void addVisitorToQueue(Visitor visitor) {
         if (visitor!= null) {
+            visitor.setVisitDate(new Date());
             waitingQueue.add(visitor);
-            System.out.println(visitor.getName() + " 已成功添加到 " + rideName + " 的等待队列。");
-        } else {
-            System.out.println("无法添加空游客到等待队列，请确保游客对象不为空。");
-        }
-    }
-
-    // 从等待队列中移除游客的方法，根据队列状态输出相应提示信息，格式更清晰友好
-    @Override
-    public void removeVisitorFromQueue() {
-        if (!waitingQueue.isEmpty()) {
-            Visitor visitor = waitingQueue.poll();
-            if (visitor!= null) {
-                System.out.println(visitor.getName() + " 已成功从 " + rideName + " 的等待队列中移除。");
+            System.out.println(visitor.getName() + " has been successfully added to the waiting queue of " + rideName + ".");
+            if (visitor.isChildTicket()) {
+                System.out.println(visitor.getName() + " is a child ticket visitor. Please ask the staff to pay more attention.");
             }
         } else {
-            System.out.println(rideName + " 的等待队列为空，无游客可移除。");
+            System.out.println("Cannot add a null visitor to the waiting queue. Please ensure that the visitor object is not null.");
         }
     }
 
-    // 打印等待队列中的游客信息的方法，包括游客姓名、年龄等关键信息，格式优化
+    // 从等待队列中移除游客的方法，根据队列状态输出相应提示信息
+    // 针对儿童票游客移除时给出更合适的提示信息
+    @Override
+    public void removeVisitorFromQueue(Visitor targetVisitor) {
+        if (targetVisitor!= null && waitingQueue.contains(targetVisitor)) {
+            waitingQueue.remove(targetVisitor);
+            if (targetVisitor.isChildTicket()) {
+                System.out.println(targetVisitor.getName() + " (child ticket visitor) has been successfully removed from the queue. Please ensure that the child has left the waiting area safely.");
+            } else {
+                System.out.println(targetVisitor.getName() + " has been successfully removed from the queue.");
+            }
+        } else {
+            System.out.println("The visitor " + targetVisitor.getName() + " is not in the waiting queue of " + rideName + " and cannot be removed.");
+        }
+    }
+
+    // 打印等待队列中的游客信息的方法，包括游客姓名、年龄、性别、门票类型和参观日期等关键信息，格式优化
+    // 在输出时对儿童票游客做特殊标识，方便查看区分
     @Override
     public void printQueue() {
-        System.out.println(rideName + " 的等待队列信息如下：");
+        System.out.println("The waiting queue information of " + rideName + " is as follows:");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         for (Visitor visitor : waitingQueue) {
             if (visitor!= null) {
-                System.out.println("姓名：" + visitor.getName() + "，年龄：" + visitor.getAge() + "，门票类型：" + visitor.getTicketType());
+                System.out.println("Name: " + visitor.getName() + ", Age: " + visitor.getAge() + ", Gender: " + visitor.getGender() + ", Ticket Type: " + visitor.getTicketType() + ", Visit Date: " + sdf.format(visitor.getVisitDate()));
             }
         }
     }
 
     // 运行一次游乐设施循环的方法，根据操作员和等待队列状态执行操作，增加更多详细的运行状态输出
+    // 针对儿童票游客在乘坐过程中给出不同提示，提醒注意儿童安全等事项
     @Override
     public void runOneCycle() {
         if (rideOperator == null) {
-            System.out.println(rideName + " 没有分配操作员，无法运行本次循环，请先设置操作员。");
+            System.out.println(rideName + " has no operator assigned and cannot run this cycle. Please set an operator first.");
             return;
         }
         if (waitingQueue.isEmpty()) {
-            System.out.println(rideName + " 的等待队列为空，没有游客可参与本次运行，无法启动循环。");
+            System.out.println("The waiting queue of " + rideName + " is empty. There are no visitors available for this run, so the cycle cannot be started.");
             return;
         }
         int numToRemove = Math.min(maxRider, waitingQueue.size());
-        System.out.println("本次运行 " + rideName + "，将从队列中移除 " + numToRemove + " 名游客并添加到乘坐历史记录中。");
+        System.out.println("For this run of " + rideName + ", " + numToRemove + " visitors will be removed from the queue and added to the ride history.");
         for (int i = 0; i < numToRemove; i++) {
             Visitor visitor = waitingQueue.poll();
             if (visitor!= null) {
                 rideHistory.add(visitor);
-                System.out.println(visitor.getName() + " 游客已成功从等待队列移除，并添加到 " + rideName + " 的乘坐历史记录中。");
+                if (visitor.isChildTicket()) {
+                    System.out.println(visitor.getName() + " (child ticket visitor) has been successfully removed from the queue and added to the ride history. Please assist the child in getting ready for the ride and ensure safety.");
+                } else {
+                    System.out.println(visitor.getName() + " has been successfully removed from the queue and added to the ride history.");
+                }
             }
         }
         numOfCycles++;
-        System.out.println(rideName + " 已成功运行了一次，当前运行次数: " + numOfCycles);
+        System.out.println(rideName + " has been successfully run once. The current number of runs: " + numOfCycles);
 
         // 打印运行后的队列信息
-        System.out.println("运行一次后，" + rideName + " 的等待队列信息如下：");
+        System.out.println("After running once, the waiting queue information of " + rideName + " is as follows:");
         printQueue();
 
         // 打印当前乘坐历史记录信息
-        System.out.println("当前 " + rideName + " 的乘坐历史记录信息如下：");
+        System.out.println("The current ride history information of " + rideName + " is as follows:");
         printRideHistory();
     }
 
@@ -162,9 +179,9 @@ public class Ride implements RideInterface {
     public void addVisitorToHistory(Visitor visitor) {
         if (visitor!= null) {
             rideHistory.add(visitor);
-            System.out.println(visitor.getName() + " 已成功添加到 " + rideName + " 的乘坐历史记录中。");
+            System.out.println(visitor.getName() + " has been successfully added to the ride history of " + rideName + ".");
         } else {
-            System.out.println("无法添加空游客到乘坐历史记录，请确保游客对象不为空。");
+            System.out.println("Cannot add a null visitor to the ride history. Please ensure that the visitor object is not null.");
         }
     }
 
@@ -180,13 +197,15 @@ public class Ride implements RideInterface {
         return rideHistory.size();
     }
 
-    // 打印乘坐历史记录中的游客信息的方法，包括游客姓名、年龄等，格式调整使其更易读
+    // 打印乘坐历史记录中的游客信息的方法，包括游客姓名、年龄、性别、门票类型和参观日期等，格式调整使其更易读
+    // 在输出时对儿童票游客做特殊标识，方便查看区分
     @Override
     public void printRideHistory() {
-        System.out.println(rideName + " 的乘坐历史记录信息如下：");
+        System.out.println("The ride history information of " + rideName + " is as follows:");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         for (Visitor visitor : rideHistory) {
             if (visitor!= null) {
-                System.out.println("姓名：" + visitor.getName() + "，年龄：" + visitor.getAge() + "，门票类型：" + visitor.getTicketType());
+                System.out.println("Name: " + visitor.getName() + ", Age: " + visitor.getAge() + ", Gender: " + visitor.getGender() + ", Ticket Type: " + visitor.getTicketType() + ", Visit Date: " + sdf.format(visitor.getVisitDate()));
             }
         }
     }
@@ -203,40 +222,45 @@ public class Ride implements RideInterface {
         });
     }
 
-    // 将乘坐历史记录导出到文件的方法，处理文件写入操作和异常，提供更详细的成功/失败提示
+    // 将乘坐历史记录导出到文件的方法，处理文件写入操作和异常，提供更详细的成功/失败提示，包含参观日期的导出
     public void exportRideHistory() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(rideName + ".csv"))) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             for (Visitor visitor : rideHistory) {
                 if (visitor!= null) {
-                    writer.write(visitor.getName() + "," + visitor.getAge() + "," + visitor.getTicketType() + "\n");
+                    writer.write(visitor.getName() + "," + visitor.getAge() + "," + visitor.getGender() + "," + visitor.getTicketType() + "," + sdf.format(visitor.getVisitDate()) + "\n");
                 }
             }
-            System.out.println(rideName + " 的乘坐历史记录已成功导出到文件。");
+            System.out.println("The ride history of " + rideName + " has been successfully exported to a file.");
         } catch (IOException e) {
-            System.out.println("导出 " + rideName + " 的乘坐历史记录文件时出错: " + e.getMessage());
+            System.out.println("An error occurred while exporting the ride history file of " + rideName + ": " + e.getMessage());
         }
     }
 
-    // 从文件中导入乘坐历史记录的方法，处理文件读取操作和异常，完善导入相关提示信息
+    // 从文件中导入乘坐历史记录的方法，处理文件读取操作和异常，完善导入相关提示信息，包含参观日期的导入
     public void importRideHistory() {
         try (Scanner scanner = new Scanner(new File(rideName + ".csv"))) {
             rideHistory.clear();
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 String[] parts = line.split(",");
-                if (parts.length == 3) {
+                if (parts.length == 5) {
                     String name = parts[0];
                     int age = Integer.parseInt(parts[1]);
-                    String ticketType = parts[2];
-                    Visitor visitor = new Visitor(name, age, ticketType);
+                    String gender = parts[2];
+                    String ticketType = parts[3];
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    Date visitDate = sdf.parse(parts[4]);
+                    Visitor visitor = new Visitor(name, age, gender, ticketType);
+                    visitor.setVisitDate(visitDate);
                     rideHistory.add(visitor);
                 }
             }
-            System.out.println(rideName + " 的乘坐历史记录已成功从文件导入。");
-            System.out.println("当前 " + rideName + " 的乘坐历史记录中共有 " + numberOfVisitors() + " 名游客，具体信息如下：");
+            System.out.println("The ride history of " + rideName + " has been successfully imported from the file.");
+            System.out.println("There are currently " + numberOfVisitors() + " visitors in the ride history of " + rideName + ". The specific information is as follows:");
             printRideHistory();
-        } catch (IOException e) {
-            System.out.println("导入 " + rideName + " 的乘坐历史记录文件时出错: " + e.getMessage());
+        } catch (IOException | java.text.ParseException e) {
+            System.out.println("An error occurred while importing the ride history file of " + rideName + ": " + e.getMessage());
         }
     }
 }
